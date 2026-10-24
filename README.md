@@ -133,10 +133,10 @@ repository only ships the request.
 is pushed. Nothing runs on a pull request or a branch push, and the workflow
 deploys nothing.
 
-Before the first tag, confirm the repository restricts who can create `v*`
-tags (a tag ruleset limited to maintainers). The workflow runs on **any**
-commit a `v*` tag points at, including one that is not on `main`, so tag
-creation is the control that decides what gets published as a signed image.
+The workflow refuses to publish unless the tag points at the protected
+`main` head, so a `v*` tag cut from any other commit publishes nothing. As
+defense in depth, restrict who can create `v*` tags with a tag ruleset
+limited to maintainers.
 
 1. Set `metadata.version` in `manifest.yaml` to the version you are releasing
    and merge that change to `main`. Then tag the merge commit and push the tag.
