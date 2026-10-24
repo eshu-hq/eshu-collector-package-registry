@@ -170,6 +170,9 @@ func mapTarget(target targetJSON, getenv func(string) string) (FetchTarget, erro
 	if visibility == "" {
 		visibility = VisibilityUnknown
 	}
+	if !visibility.Valid() {
+		return FetchTarget{}, configErrorf("unsupported visibility")
+	}
 	documentFormat := strings.TrimSpace(target.DocumentFormat)
 	if documentFormat == "" {
 		documentFormat = DocumentFormatNative
