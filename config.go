@@ -83,9 +83,12 @@ func (t TargetConfig) Validate() (TargetConfig, error) {
 	if provider == "" {
 		return TargetConfig{}, fmt.Errorf("provider is required")
 	}
-	ecosystem := Ecosystem(strings.TrimSpace(string(t.Ecosystem)))
+	ecosystem := NormalizeEcosystem(t.Ecosystem)
 	if ecosystem == "" {
-		return TargetConfig{}, fmt.Errorf("ecosystem is required")
+		if strings.TrimSpace(string(t.Ecosystem)) == "" {
+			return TargetConfig{}, fmt.Errorf("ecosystem is required")
+		}
+		return TargetConfig{}, fmt.Errorf("ecosystem is unsupported")
 	}
 	registry := normalizeRegistry(t.Registry)
 	if registry == "" {

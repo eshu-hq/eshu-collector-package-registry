@@ -174,10 +174,17 @@ func mapTarget(target targetJSON, getenv func(string) string) (FetchTarget, erro
 	if documentFormat != DocumentFormatNative && documentFormat != DocumentFormatArtifactoryPackage {
 		return FetchTarget{}, configErrorf("unsupported document_format")
 	}
+	ecosystem := NormalizeEcosystem(Ecosystem(target.Ecosystem))
+	if ecosystem == "" {
+		if strings.TrimSpace(target.Ecosystem) == "" {
+			return FetchTarget{}, configErrorf("ecosystem is required")
+		}
+		return FetchTarget{}, configErrorf("unsupported ecosystem")
+	}
 	return FetchTarget{
 		Base: TargetConfig{
 			Provider:     strings.TrimSpace(target.Provider),
-			Ecosystem:    Ecosystem(strings.TrimSpace(target.Ecosystem)),
+			Ecosystem:    ecosystem,
 			Registry:     strings.TrimRight(strings.TrimSpace(target.Registry), "/"),
 			ScopeID:      strings.TrimSpace(target.ScopeID),
 			Namespace:    strings.TrimSpace(target.Namespace),
