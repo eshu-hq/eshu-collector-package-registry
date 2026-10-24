@@ -17,10 +17,6 @@ const (
 	// SourceSystem is the source system name facts carry when the claim does
 	// not name one. Hosted claims carry the activation's source system.
 	SourceSystem = "package_registry"
-	// MetricsPrefix is the component-owned metric prefix the manifest declares.
-	// Nothing in this repository emits a metric under it yet; see the README
-	// section "Operator signals".
-	MetricsPrefix = "eshu_dp_package_registry_collector_"
 	// SchemaVersion is the schema version of every emitted package_registry
 	// fact.
 	SchemaVersion = "1.0.0"
