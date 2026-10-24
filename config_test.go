@@ -4,6 +4,7 @@
 package collector
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -39,8 +40,11 @@ func TestTargetConfigValidateCanonicalizesEcosystemAlias(t *testing.T) {
 }
 
 // TestTargetConfigValidateRejectsUnknownEcosystem pins the #9029 fail-fast
-// contract: an ecosystem no parser can serve must fail at config load, never
-// degrade to a runtime warning.
+// contract: an ecosystem value NormalizeEcosystem cannot map must fail at
+// config load. Canonical-but-unregistered ecosystems (e.g. composer, which
+// maps but has no parser) still pass load today and degrade to a runtime
+// unsupported_metadata_source warning; see
+// TestTargetConfigValidateAdmitsCanonicalButUnregisteredEcosystem.
 func TestTargetConfigValidateRejectsUnknownEcosystem(t *testing.T) {
 	t.Parallel()
 
@@ -52,6 +56,26 @@ func TestTargetConfigValidateRejectsUnknownEcosystem(t *testing.T) {
 	}
 	if _, err := unknown.Validate(); err == nil {
 		t.Fatal("Validate(unknown ecosystem) error = nil, want rejection")
+	} else if !strings.Contains(err.Error(), "unsupported") {
+		t.Fatalf("Validate() error = %q, want the unsupported branch", err)
+	}
+}
+
+// TestTargetConfigValidateAdmitsCanonicalButUnregisteredEcosystem pins the
+// disclosed load behavior: composer normalizes but has no registered parser,
+// so it passes config load and degrades to a runtime warning instead of
+// failing fast. Narrowing this to a load-time rejection is future work.
+func TestTargetConfigValidateAdmitsCanonicalButUnregisteredEcosystem(t *testing.T) {
+	t.Parallel()
+
+	composer := TargetConfig{
+		Provider:  "test",
+		Ecosystem: "composer",
+		Registry:  "https://example.com",
+		ScopeID:   "test://example.com/scope",
+	}
+	if _, err := composer.Validate(); err != nil {
+		t.Fatalf("Validate(composer) error = %v, want load success with runtime warning", err)
 	}
 }
 
@@ -72,8 +96,9 @@ func TestParseSettingsCanonicalizesEcosystemAlias(t *testing.T) {
 }
 
 // TestParseSettingsRejectsUnknownEcosystem pins the activation-config
-// fail-fast path: an unknown ecosystem must fail closed, and the error must
-// name the key without quoting the configured value.
+// fail-fast path: an unmappable ecosystem must fail closed with the
+// unsupported branch (not a wrong-branch error), the invalid_config failure
+// class, and an error that names the key without quoting the value.
 func TestParseSettingsRejectsUnknownEcosystem(t *testing.T) {
 	t.Parallel()
 
@@ -82,6 +107,16 @@ func TestParseSettingsRejectsUnknownEcosystem(t *testing.T) {
 	_, err := ParseSettings(map[string]any{"targets": []any{cfg}}, "collector-1", func(string) string { return "" })
 	if err == nil {
 		t.Fatal("ParseSettings(unknown ecosystem) error = nil, want rejection")
+	}
+	if !strings.Contains(err.Error(), "unsupported") {
+		t.Fatalf("ParseSettings() error = %q, want the unsupported branch", err)
+	}
+	var configErr ConfigError
+	if !errors.As(err, &configErr) {
+		t.Fatalf("ParseSettings() error type = %T, want ConfigError", err)
+	}
+	if configErr.FailureClass() != FailureInvalidConfig {
+		t.Fatalf("FailureClass() = %q, want %q", configErr.FailureClass(), FailureInvalidConfig)
 	}
 	if strings.Contains(err.Error(), "not-a-real-ecosystem") {
 		t.Fatalf("error %q must not quote the configured value", err.Error())

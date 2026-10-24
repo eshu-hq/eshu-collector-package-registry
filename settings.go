@@ -179,7 +179,7 @@ func mapTarget(target targetJSON, getenv func(string) string) (FetchTarget, erro
 		if strings.TrimSpace(target.Ecosystem) == "" {
 			return FetchTarget{}, configErrorf("ecosystem is required")
 		}
-		return FetchTarget{}, configErrorf("unsupported ecosystem")
+		return FetchTarget{}, configErrorf("ecosystem is unsupported")
 	}
 	return FetchTarget{
 		Base: TargetConfig{
