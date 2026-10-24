@@ -146,7 +146,10 @@ func ParseSettings(raw map[string]any, instanceID string, getenv func(string) st
 			targets[i].Base = base
 		}
 	}
-	derived := mapDerivedTargets(cfg.Derive)
+	derived, err := mapDerivedTargets(cfg.Derive)
+	if err != nil {
+		return Settings{}, err
+	}
 	if len(targets) == 0 && !derived.Enabled {
 		return Settings{}, configErrorf("at least one package-registry target is required")
 	}
@@ -174,10 +177,17 @@ func mapTarget(target targetJSON, getenv func(string) string) (FetchTarget, erro
 	if documentFormat != DocumentFormatNative && documentFormat != DocumentFormatArtifactoryPackage {
 		return FetchTarget{}, configErrorf("unsupported document_format")
 	}
+	ecosystem := NormalizeEcosystem(Ecosystem(target.Ecosystem))
+	if ecosystem == "" {
+		if strings.TrimSpace(target.Ecosystem) == "" {
+			return FetchTarget{}, configErrorf("ecosystem is required")
+		}
+		return FetchTarget{}, configErrorf("ecosystem is unsupported")
+	}
 	return FetchTarget{
 		Base: TargetConfig{
 			Provider:     strings.TrimSpace(target.Provider),
-			Ecosystem:    Ecosystem(strings.TrimSpace(target.Ecosystem)),
+			Ecosystem:    ecosystem,
 			Registry:     strings.TrimRight(strings.TrimSpace(target.Registry), "/"),
 			ScopeID:      strings.TrimSpace(target.ScopeID),
 			Namespace:    strings.TrimSpace(target.Namespace),
@@ -195,20 +205,28 @@ func mapTarget(target targetJSON, getenv func(string) string) (FetchTarget, erro
 	}, nil
 }
 
-func mapDerivedTargets(config derivedJSON) DerivedTargetConfig {
+// mapDerivedTargets resolves the derive-from-owned-packages block. A
+// fail-closed activation config must not silently drop entries: any listed
+// ecosystem that NormalizeEcosystem cannot map fails the claim as
+// invalid_config instead of degrading to a disabled derived set.
+func mapDerivedTargets(config derivedJSON) (DerivedTargetConfig, error) {
 	if !config.Enabled {
-		return DerivedTargetConfig{}
+		return DerivedTargetConfig{}, nil
 	}
 	ecosystems := make([]Ecosystem, 0, len(config.Ecosystems))
 	for _, ecosystem := range config.Ecosystems {
-		ecosystems = append(ecosystems, Ecosystem(strings.TrimSpace(ecosystem)))
+		normalized := NormalizeEcosystem(Ecosystem(strings.TrimSpace(ecosystem)))
+		if normalized == "" {
+			return DerivedTargetConfig{}, configErrorf("derived ecosystems contain an unsupported ecosystem")
+		}
+		ecosystems = append(ecosystems, normalized)
 	}
 	return normalizeDerivedTargetConfig(DerivedTargetConfig{
 		Enabled:      true,
 		Ecosystems:   ecosystems,
 		PackageLimit: config.PackageLimit,
 		VersionLimit: config.VersionLimit,
-	})
+	}), nil
 }
 
 func envDuration(getenv func(string) string, key string, fallback time.Duration) (time.Duration, error) {

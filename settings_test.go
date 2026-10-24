@@ -4,6 +4,7 @@
 package collector
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -99,6 +100,52 @@ func TestParseSettingsAcceptsDerivedOnlyConfig(t *testing.T) {
 	}
 	if !settings.DerivedTargets.Enabled {
 		t.Fatal("derived targets must be enabled")
+	}
+}
+
+// TestParseSettingsRejectsUnknownDerivedEcosystem pins the #9029 fail-closed
+// derived path: an enabled derive block listing an ecosystem
+// NormalizeEcosystem cannot map must fail as invalid_config, naming the key
+// without quoting the value, instead of silently degrading to a disabled
+// derived set.
+func TestParseSettingsRejectsUnknownDerivedEcosystem(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseSettings(map[string]any{
+		"derive_from_owned_packages": map[string]any{"enabled": true, "ecosystems": []any{"not-a-real-ecosystem"}},
+	}, "collector-1", func(string) string { return "" })
+	if err == nil {
+		t.Fatal("ParseSettings(unknown derived ecosystem) error = nil, want rejection")
+	}
+	if !strings.Contains(err.Error(), "unsupported") {
+		t.Fatalf("ParseSettings() error = %q, want the unsupported branch", err)
+	}
+	var configErr ConfigError
+	if !errors.As(err, &configErr) {
+		t.Fatalf("ParseSettings() error type = %T, want ConfigError", err)
+	}
+	if configErr.FailureClass() != FailureInvalidConfig {
+		t.Fatalf("FailureClass() = %q, want %q", configErr.FailureClass(), FailureInvalidConfig)
+	}
+	if strings.Contains(err.Error(), "not-a-real-ecosystem") {
+		t.Fatalf("error %q must not quote the configured value", err.Error())
+	}
+}
+
+// TestParseSettingsRejectsUnknownDerivedAlongsideExplicitTargets pins the
+// mixed case: valid explicit targets do not rescue an unknown derived entry.
+func TestParseSettingsRejectsUnknownDerivedAlongsideExplicitTargets(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseSettings(map[string]any{
+		"targets":                    []any{validTargetConfig()},
+		"derive_from_owned_packages": map[string]any{"enabled": true, "ecosystems": []any{"npm", "not-a-real-ecosystem"}},
+	}, "collector-1", func(string) string { return "" })
+	if err == nil {
+		t.Fatal("ParseSettings(explicit targets plus unknown derived) error = nil, want rejection")
+	}
+	if !strings.Contains(err.Error(), "unsupported") {
+		t.Fatalf("ParseSettings() error = %q, want the unsupported branch", err)
 	}
 }
 
