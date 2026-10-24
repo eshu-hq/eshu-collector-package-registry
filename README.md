@@ -73,9 +73,9 @@ item: the **failure class** (`registry_rate_limited`, `invalid_config`,
 to stderr for local runs and tests; the host's process runner drops the text.
 
 The in-tree collector emitted fetch spans and counters. This collector has no
-equivalent. The manifest declares
-`telemetry.metricsPrefix: eshu_dp_package_registry_collector_`, but nothing in
-this repository emits a metric under it.
+equivalent and declares no `telemetry.metricsPrefix` (eshu-hq/eshu#9032): a
+per-claim process whose stderr the host drops, reporting over an SDK result
+with no metrics field, has no channel to emit metrics under a declared prefix.
 
 ## Image and seeding
 

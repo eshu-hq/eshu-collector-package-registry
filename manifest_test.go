@@ -142,7 +142,17 @@ func TestManifestDeclaresNineKinds(t *testing.T) {
 	if !reflect.DeepEqual(declared, want) {
 		t.Fatalf("manifest kinds = %v, contract kinds = %v", declared, want)
 	}
-	if manifest.Spec.Telemetry.MetricsPrefix != MetricsPrefix {
-		t.Fatalf("metricsPrefix = %q, want %q", manifest.Spec.Telemetry.MetricsPrefix, MetricsPrefix)
+}
+
+// TestManifestDeclaresNoMetricsPrefix guards eshu-hq/eshu#9032: the collector
+// emits no metrics (a per-claim process whose stderr the host drops, over an
+// SDK result with no metrics field), so the manifest must not declare a
+// component-owned metric prefix it never emits under.
+func TestManifestDeclaresNoMetricsPrefix(t *testing.T) {
+	t.Parallel()
+
+	manifest := loadManifest(t)
+	if manifest.Spec.Telemetry.MetricsPrefix != "" {
+		t.Fatalf("metricsPrefix = %q, want no metricsPrefix declaration: the collector emits no metrics", manifest.Spec.Telemetry.MetricsPrefix)
 	}
 }
