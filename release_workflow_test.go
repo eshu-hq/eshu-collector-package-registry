@@ -6,6 +6,8 @@ package collector
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -162,6 +164,133 @@ func releaseWorkflowProblems(raw []byte) []string {
 		}
 	}
 	return problems
+}
+
+// mainHeadGateStepName is the release workflow step that stops a tag pointing
+// anywhere but the protected main head from publishing an image.
+const mainHeadGateStepName = "Require the tag to point at the protected main head"
+
+// mainHeadGateStep returns the release workflow step that compares the pushed
+// tag's commit with the protected main head.
+func mainHeadGateStep(t *testing.T) workflowStep {
+	t.Helper()
+	raw, err := os.ReadFile(".github/workflows/release.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var workflow workflowFile
+	if err := yaml.Unmarshal(raw, &workflow); err != nil {
+		t.Fatal(err)
+	}
+	steps := workflow.Jobs["image"].Steps
+	idx := stepIndex(steps, func(s workflowStep) bool { return s.Name == mainHeadGateStepName })
+	if idx < 0 {
+		t.Fatalf("release.yml has no step named %q", mainHeadGateStepName)
+	}
+	return steps[idx]
+}
+
+// TestReleaseWorkflowGatesTagOnMainHead pins the release workflow shape: a
+// step before anything is pushed must fail unless the pushed tag points at
+// the protected main head, so a v* tag cut from any other commit publishes
+// nothing.
+func TestReleaseWorkflowGatesTagOnMainHead(t *testing.T) {
+	t.Parallel()
+
+	raw, err := os.ReadFile(".github/workflows/release.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var workflow workflowFile
+	if err := yaml.Unmarshal(raw, &workflow); err != nil {
+		t.Fatal(err)
+	}
+	steps := workflow.Jobs["image"].Steps
+	gateIdx := stepIndex(steps, func(s workflowStep) bool { return s.Name == mainHeadGateStepName })
+	if gateIdx < 0 {
+		t.Fatalf("release.yml has no step named %q", mainHeadGateStepName)
+	}
+	publishIdx := stepIndex(steps, func(s workflowStep) bool { return fmt.Sprint(s.With["push"]) == "true" })
+	if publishIdx < 0 {
+		t.Fatal("release.yml has no step that pushes the image")
+	}
+	if gateIdx > publishIdx {
+		t.Fatalf("step %q runs after the image is pushed", mainHeadGateStepName)
+	}
+	gate := steps[gateIdx]
+	if !strings.Contains(gate.Run, "origin/main") {
+		t.Errorf("step %q never resolves the protected main head (want origin/main in the script)", mainHeadGateStepName)
+	}
+	if !strings.Contains(gate.Run, "github.sha") && !strings.Contains(gate.Env["TAG_COMMIT"], "github.sha") {
+		t.Errorf("step %q never reads the pushed tag's commit (want github.sha in the script or TAG_COMMIT)", mainHeadGateStepName)
+	}
+	if !strings.Contains(gate.Run, "exit 1") {
+		t.Errorf("step %q never fails closed (want exit 1 on mismatch)", mainHeadGateStepName)
+	}
+}
+
+// TestReleaseMainHeadStepComparesTagCommitWithMainHead runs the workflow's own
+// gate script the way the runner does (bash -e) in a scratch repo, so a tag
+// off the main head cannot publish a signed image while a tag on it can.
+func TestReleaseMainHeadStepComparesTagCommitWithMainHead(t *testing.T) {
+	t.Parallel()
+
+	bash, err := exec.LookPath("bash")
+	if err != nil {
+		t.Skip("bash is not available")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not available")
+	}
+	step := mainHeadGateStep(t)
+
+	dir := t.TempDir()
+	git := func(args ...string) string {
+		t.Helper()
+		full := append([]string{"-c", "user.email=test@example.com", "-c", "user.name=test", "-c", "protocol.file.allow=always"}, args...)
+		cmd := exec.Command("git", full...)
+		cmd.Dir = dir
+		cmd.Env = []string{"PATH=" + os.Getenv("PATH")}
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	git("init", "-b", "main")
+	if err := os.WriteFile(filepath.Join(dir, "file"), []byte("one"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	git("add", "file")
+	git("commit", "-m", "one")
+	git("remote", "add", "origin", dir)
+	first := git("rev-parse", "HEAD")
+	git("commit", "--allow-empty", "-m", "two")
+	head := git("rev-parse", "HEAD")
+	git("checkout", "-b", "feature", first)
+	git("commit", "--allow-empty", "-m", "off main")
+	offMain := git("rev-parse", "HEAD")
+	git("checkout", "-q", "main")
+
+	for name, tc := range map[string]struct {
+		commit string
+		want   bool
+	}{
+		"tag on the main head passes": {head, true},
+		"older commit on main fails":  {first, false},
+		"commit off main fails":       {offMain, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			cmd := exec.Command(bash, "-e", "-c", step.Run)
+			cmd.Dir = dir
+			cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "TAG_NAME=v0.1.0", "TAG_COMMIT=" + tc.commit}
+			out, err := cmd.CombinedOutput()
+			if got := err == nil; got != tc.want {
+				t.Fatalf("tag commit %q: passed = %t, want %t\n%s", tc.commit, got, tc.want, out)
+			}
+		})
+	}
 }
 
 // TestReleaseWorkflowHoldsSafetyProperties pins the release workflow shape.

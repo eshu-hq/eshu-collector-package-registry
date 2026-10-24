@@ -1,9 +1,10 @@
 name: release
 
 # Publishes the collector image when a version tag is pushed. Nothing runs on a
-# pull request or a branch push, and nothing here deploys. A person copies the
-# digest from the job summary into the activation's seed.image (README,
-# "Releasing").
+# pull request or a branch push, and nothing here deploys. The tag must point
+# at the protected main head: a v* tag cut from any other commit fails before
+# anything is built or pushed. A person copies the digest from the job summary
+# into the activation's seed.image (README, "Releasing").
 on:
   push:
     tags:
@@ -38,6 +39,16 @@ jobs:
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           persist-credentials: false
+      - name: Require the tag to point at the protected main head
+        env:
+          TAG_COMMIT: ${{ github.sha }}
+        run: |
+          git fetch origin main --quiet
+          main_head="$(git rev-parse origin/main)"
+          if [[ "${TAG_COMMIT}" != "${main_head}" ]]; then
+            echo "tag '${TAG_NAME}' points at ${TAG_COMMIT}, not the protected main head ${main_head}" >&2
+            exit 1
+          fi
       - name: Require the tag to match the manifest version
         run: |
           version="$(awk '
