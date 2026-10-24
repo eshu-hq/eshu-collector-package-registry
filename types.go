@@ -20,6 +20,18 @@ const (
 	VisibilityPrivate Visibility = "private"
 )
 
+// Valid reports whether the visibility is a known package-registry value.
+// Config loaders use it to fail closed on unknown strings instead of passing
+// them through to collection.
+func (v Visibility) Valid() bool {
+	switch v {
+	case VisibilityUnknown, VisibilityPublic, VisibilityPrivate:
+		return true
+	default:
+		return false
+	}
+}
+
 // PackageIdentity is the raw identity tuple observed from a registry or feed.
 type PackageIdentity = RawIdentity
 

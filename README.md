@@ -45,7 +45,9 @@ every emitted fact.
 `scope_id`, `packages`, limits, `visibility`, `metadata_url`,
 `document_format`, and `*_env` credential names), an optional
 `derive_from_owned_packages` block (npm/PyPI scope-derived targets), and an
-optional `limits` block. Unknown keys fail closed. `*_env` entries name
+optional `limits` block. Unknown keys fail closed. `visibility` accepts
+`unknown`, `public`, or `private` (default `unknown`); any other value fails
+the claim terminal with `invalid_config`. `*_env` entries name
 environment variables the worker exports. Secret values never appear in facts,
 source URIs, logs, or statuses, and config rejections name keys without
 quoting what was configured.

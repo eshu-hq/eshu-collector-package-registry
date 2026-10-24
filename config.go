@@ -109,6 +109,13 @@ func (t TargetConfig) Validate() (TargetConfig, error) {
 	if versionLimit < 0 || versionLimit > maxVersionLimit {
 		return TargetConfig{}, fmt.Errorf("version_limit must be between 0 and %d", maxVersionLimit)
 	}
+	visibility := Visibility(strings.TrimSpace(string(t.Visibility)))
+	if visibility == "" {
+		visibility = VisibilityUnknown
+	}
+	if !visibility.Valid() {
+		return TargetConfig{}, fmt.Errorf("unsupported visibility")
+	}
 
 	return TargetConfig{
 		Provider:     provider,
@@ -119,7 +126,7 @@ func (t TargetConfig) Validate() (TargetConfig, error) {
 		Packages:     compactPackageList(t.Packages),
 		PackageLimit: packageLimit,
 		VersionLimit: versionLimit,
-		Visibility:   t.Visibility,
+		Visibility:   visibility,
 		SourceURI:    strings.TrimSpace(t.SourceURI),
 		FencingToken: t.FencingToken,
 	}, nil
