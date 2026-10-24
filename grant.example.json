@@ -1,0 +1,101 @@
+[
+  {
+    "producer_id": "dev.eshu.collector.package_registry",
+    "version": "0.1.0",
+    "kind": "package_registry.package",
+    "schema_versions": [
+      "1.0.0"
+    ],
+    "scope": "package_registry",
+    "expires_at": "2027-10-01T00:00:00Z",
+    "revoked": false
+  },
+  {
+    "producer_id": "dev.eshu.collector.package_registry",
+    "version": "0.1.0",
+    "kind": "package_registry.package_version",
+    "schema_versions": [
+      "1.0.0"
+    ],
+    "scope": "package_registry",
+    "expires_at": "2027-10-01T00:00:00Z",
+    "revoked": false
+  },
+  {
+    "producer_id": "dev.eshu.collector.package_registry",
+    "version": "0.1.0",
+    "kind": "package_registry.package_dependency",
+    "schema_versions": [
+      "1.0.0"
+    ],
+    "scope": "package_registry",
+    "expires_at": "2027-10-01T00:00:00Z",
+    "revoked": false
+  },
+  {
+    "producer_id": "dev.eshu.collector.package_registry",
+    "version": "0.1.0",
+    "kind": "package_registry.package_artifact",
+    "schema_versions": [
+      "1.0.0"
+    ],
+    "scope": "package_registry",
+    "expires_at": "2027-10-01T00:00:00Z",
+    "revoked": false
+  },
+  {
+    "producer_id": "dev.eshu.collector.package_registry",
+    "version": "0.1.0",
+    "kind": "package_registry.source_hint",
+    "schema_versions": [
+      "1.0.0"
+    ],
+    "scope": "package_registry",
+    "expires_at": "2027-10-01T00:00:00Z",
+    "revoked": false
+  },
+  {
+    "producer_id": "dev.eshu.collector.package_registry",
+    "version": "0.1.0",
+    "kind": "package_registry.vulnerability_hint",
+    "schema_versions": [
+      "1.0.0"
+    ],
+    "scope": "package_registry",
+    "expires_at": "2027-10-01T00:00:00Z",
+    "revoked": false
+  },
+  {
+    "producer_id": "dev.eshu.collector.package_registry",
+    "version": "0.1.0",
+    "kind": "package_registry.registry_event",
+    "schema_versions": [
+      "1.0.0"
+    ],
+    "scope": "package_registry",
+    "expires_at": "2027-10-01T00:00:00Z",
+    "revoked": false
+  },
+  {
+    "producer_id": "dev.eshu.collector.package_registry",
+    "version": "0.1.0",
+    "kind": "package_registry.repository_hosting",
+    "schema_versions": [
+      "1.0.0"
+    ],
+    "scope": "package_registry",
+    "expires_at": "2027-10-01T00:00:00Z",
+    "revoked": false
+  },
+  {
+    "producer_id": "dev.eshu.collector.package_registry",
+    "version": "0.1.0",
+    "kind": "package_registry.warning",
+    "schema_versions": [
+      "1.0.0"
+    ],
+    "scope": "package_registry",
+    "expires_at": "2027-10-01T00:00:00Z",
+    "revoked": false
+  }
+]
