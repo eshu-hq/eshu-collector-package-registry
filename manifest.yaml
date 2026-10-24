@@ -1,0 +1,77 @@
+apiVersion: eshu.dev/v1alpha1
+kind: ComponentPackage
+metadata:
+  id: dev.eshu.collector.package_registry
+  name: Package registry collector
+  publisher: eshu-hq
+  version: 0.1.0
+spec:
+  compatibleCore: ">=0.0.5 <0.2.0"
+  componentType: collector
+  collectorKinds:
+    - package_registry
+  runtime:
+    sdkProtocol: collector-sdk/v1alpha1
+    adapter: process
+  artifacts:
+    - platform: linux/amd64
+      image: ghcr.io/eshu-hq/eshu-collector-package-registry@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  emittedFacts:
+    - kind: package_registry.package
+      payloadSchemaRef: package_registry.package
+      schemaVersions:
+        - 1.0.0
+      sourceConfidence:
+        - reported
+    - kind: package_registry.package_version
+      payloadSchemaRef: package_registry.package_version
+      schemaVersions:
+        - 1.0.0
+      sourceConfidence:
+        - reported
+    - kind: package_registry.package_dependency
+      payloadSchemaRef: package_registry.package_dependency
+      schemaVersions:
+        - 1.0.0
+      sourceConfidence:
+        - reported
+    - kind: package_registry.package_artifact
+      payloadSchemaRef: package_registry.package_artifact
+      schemaVersions:
+        - 1.0.0
+      sourceConfidence:
+        - reported
+    - kind: package_registry.source_hint
+      payloadSchemaRef: package_registry.source_hint
+      schemaVersions:
+        - 1.0.0
+      sourceConfidence:
+        - reported
+    - kind: package_registry.vulnerability_hint
+      payloadSchemaRef: package_registry.vulnerability_hint
+      schemaVersions:
+        - 1.0.0
+      sourceConfidence:
+        - reported
+    - kind: package_registry.registry_event
+      payloadSchemaRef: package_registry.registry_event
+      schemaVersions:
+        - 1.0.0
+      sourceConfidence:
+        - reported
+    - kind: package_registry.repository_hosting
+      payloadSchemaRef: package_registry.repository_hosting
+      schemaVersions:
+        - 1.0.0
+      sourceConfidence:
+        - reported
+    - kind: package_registry.warning
+      payloadSchemaRef: package_registry.warning
+      schemaVersions:
+        - 1.0.0
+      sourceConfidence:
+        - reported
+  telemetry:
+    # Declared only: the collector emits no metric under this prefix. See the
+    # README section "Operator signals".
+    metricsPrefix: eshu_dp_package_registry_collector_

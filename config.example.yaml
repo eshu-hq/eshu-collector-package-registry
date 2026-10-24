@@ -1,0 +1,67 @@
+# Example component activation config for the package-registry collector. Copy
+# it, replace the placeholder host and scope, and point the environment
+# variables at real credentials. It holds no secrets: *_env entries NAME
+# environment variables the worker process exports; their values never appear
+# here, in facts, in logs, or in statuses.
+#
+# Cutover identity. When this activation replaces the in-tree package-registry
+# collector, these values must equal the in-tree ones, or every stable fact
+# key and the payload's collector_instance_id change:
+#   host.scope.id        = the in-tree target's scope_id
+#   host.scope.kind      = package_registry
+#   host.sourceSystem    = the in-tree source system (package_registry)
+#   activation instance id (--instance) = the in-tree collector instance id
+# The values below are placeholders. Read the real ones from the live in-tree
+# configuration; do not invent new ones.
+host:
+  # Source system recorded on every fact. Match the claim the coordinator plans.
+  sourceSystem: package_registry
+  scope:
+    # One activation covers one package-registry target. The scope id is the
+    # stable identity of the feed; it is part of every stable fact key, so
+    # choose it once and keep it.
+    id: npm://registry.npmjs.org/left-pad
+    kind: package_registry
+process:
+  command: ./collector
+  args:
+    - --sdk-stdio
+  # A target with a large metadata window returns more than the host's default
+  # 4 MiB stdout cap. Raise this together with config.limits.maxResultBytes;
+  # the collector fails terminal with result_budget_exceeded rather than let
+  # the host drop an oversized result.
+  stdout_limit_bytes: 67108864
+config:
+  targets:
+    - provider: npm
+      ecosystem: npm
+      registry: https://registry.npmjs.org
+      scope_id: npm://registry.npmjs.org/left-pad
+      packages:
+        - left-pad
+      package_limit: 20
+      version_limit: 20
+      visibility: public
+      metadata_url: https://registry.npmjs.org/left-pad
+      document_format: native
+      # bearer_token_env, username_env, and password_env NAME environment
+      # variables the worker exports; their values never enter facts, logs, or
+      # statuses. Leave all three unset for a credential-free public feed.
+      # bearer_token_env: PKGREG_TOKEN
+  # derive_from_owned_packages resolves public package targets from the claim
+  # scope when no explicit target matches (npm and PyPI only).
+  derive_from_owned_packages:
+    enabled: false
+    ecosystems:
+      - npm
+    package_limit: 1
+    version_limit: 1
+  limits:
+    maxRecordsPerClaim: 50000
+    maxPayloadBytes: 1048576
+    maxResultBytes: 3145728
+    # Wall-time bound for one claim. The host also kills the process at the
+    # claim deadline, which is the initial lease expiry. The collector stops
+    # starting provider calls at the deadline minus min(2s, 5% of the time
+    # left) and returns retryable claim_deadline_exceeded with no facts.
+    claimTimeoutSeconds: 300
