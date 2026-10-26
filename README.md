@@ -67,6 +67,17 @@ a `retryable` result with failure class `claim_deadline_exceeded` and no
 facts. A missing deadline leaves only `limits.claimTimeoutSeconds` (default
 300) as the bound.
 
+## Pins
+
+Exact published SDK pair from
+[SDK compatibility](https://github.com/eshu-hq/eshu/blob/main/docs/public/extend/sdk-compatibility.md):
+
+- `github.com/eshu-hq/eshu-sdk/collector@v0.1.0-rc.3`
+- `github.com/eshu-hq/eshu-sdk/factschema@v0.1.0-rc.5`
+
+No `replace` directives and no `go.work`. Verify with
+`GOPROXY=proxy.golang.org go list -m <module>@<version>` for each pin.
+
 ## Operator signals
 
 Today the extension host passes one thing from a claim's result to the work
