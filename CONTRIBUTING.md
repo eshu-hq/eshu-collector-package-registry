@@ -13,7 +13,12 @@ Shell scripts pass `shellcheck` (see the `shell` lane). Keep them
 
 ## CI lanes
 
-Job names are frozen because branch protection requires `ci-complete`:
+Job names are frozen because branch protection requires `go-ci / ci-complete`.
+Lane bodies live in the pinned reusable workflow
+`eshu-hq/.github/.github/workflows/go-collector-ci.yml` (see the `go-ci`
+job in `.github/workflows/ci.yml`); check runs nest as `go-ci / <lane>`.
+Artifacts are named per module: `coverage-package-registry` (14-day
+retention) and `gosec-package-registry` (SARIF + log, 14-day retention).
 
 | Lane | Runs when |
 | --- | --- |
@@ -33,7 +38,9 @@ through `ci-complete`. Anything unclassified (for example `Makefile`,
 `scripts/record-grants.sh` runs `shell` plus `test` because the grant
 test opens it; `.github/dependabot.yml` runs the workflow lanes.
 A manual `workflow_dispatch` run records every lane; the weekly schedule
-runs `govulncheck` and `gosec` only.
+runs `govulncheck`, `gosec`, and `actionlint` (the workflow lanes stay
+green on findings except the scheduled scan, which fails to file the
+weekly issue).
 
 ## Coverage floor
 

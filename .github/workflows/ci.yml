@@ -1,9 +1,25 @@
-# CI gates for eshu-collector-package-registry. Lane contract (see
-# CONTRIBUTING.md): frozen job names lint, test, race, boundary, shell,
-# image, govulncheck, gosec, with ci-complete as the only required context.
-# A PR pays only for lanes its paths can affect; push-to-main and a manual
-# workflow_dispatch run record every lane; the weekly schedule runs
-# govulncheck and gosec only.
+# CI gates for eshu-collector-package-registry.
+#
+# Thin caller over the shared lane bodies in
+# eshu-hq/.github/.github/workflows/go-collector-ci.yml (v2, pinned below):
+# this file holds the paths-filter `changes` job, the `go-ci` call with
+# this repo's run-gate wiring, and the two caller-side jobs the reusable
+# cannot own (weekly findings issue, SARIF upload). Lane bodies
+# (lint/test/race/shell/image/boundary/govulncheck/gosec/actionlint and
+# the ci-complete aggregator) live upstream; check runs nest as
+# `go-ci / <lane>`, so the ruleset requires `go-ci / ci-complete`.
+#
+# Pinned actions (re-verify with git ls-remote when auditing; Dependabot
+# github-actions proposes bumps, weekly grouped):
+#   actions/checkout v7.0.1              3d3c42e5aac5ba805825da76410c181273ba90b1
+#   dorny/paths-filter v4                ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d
+#   actions/download-artifact v7         37930b1c2abaa49bbe596cd826c3c89aef350131
+#   github/codeql-action/upload-sarif v4.39.1 9b3254085494b55a0f7c4c2b3d2d52cc712ce370
+#   eshu-hq/.github v2                   4d01ab90baf5dd77c21cc1ee6bdf701332613449
+# Go tools (passed as inputs; hash-verified by the toolchain on install):
+#   golangci-lint v2.12.2, govulncheck v1.9.0 (-scan package),
+#   gosec v2.30.0 (this repo's measured 1-triage baseline, see #13),
+#   actionlint v1.7.12 (tarball, sha256-checked upstream).
 name: ci
 
 on:
@@ -18,13 +34,6 @@ permissions: {}
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
-env:
-  COVERAGE_FLOOR: 68.4
-  GOLANGCI_VERSION: v2.12.2
-  GOSEC_VERSION: v2.30.0
-  GOVULNCHECK_VERSION: v1.9.0
-  ACTIONLINT_VERSION: v1.7.12
 
 jobs:
   changes:
@@ -98,179 +107,98 @@ jobs:
               - '!README.md'
               - '!LICENSE'
 
-  lint:
-    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.go == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.misc == 'true' || (needs.changes.result != 'success' && github.event_name != 'pull_request' && github.event_name != 'schedule'))
+  go-ci:
+    # always(): changes runs only on pull_request/push, so without this the
+    # call (and every lane, plus the failure-gated weekly filing job) is
+    # skipped on schedule and workflow_dispatch runs.
+    if: always()
     needs: [changes]
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # contents:read is the minimum that can fetch the reusable workflow
+    # definition upstream; inner jobs run under the reusable's own
+    # contents:read declaration. Top-level stays empty (fork-safe).
     permissions:
       contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-      - run: go vet ./...
-      - run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${{ env.GOLANGCI_VERSION }}
-      - run: golangci-lint run ./...
-      - run: test -z "$(golangci-lint fmt --diff ./... 2>/dev/null)"
-      - run: go mod tidy -diff
-      - run: test -z "$(git ls-files '*.go' | xargs wc -l | grep -v ' total$' | awk '$1 > 500')"
-      - if: needs.changes.outputs.workflows == 'true' || github.event_name != 'pull_request'
-        run: |
-          go install github.com/rhysd/actionlint/cmd/actionlint@${{ env.ACTIONLINT_VERSION }}
-          actionlint .github/workflows/*.yml
+    # No timeout-minutes here: a reusable-call job accepts only name/uses/
+    # with/secrets/needs/if/permissions, so the run ceiling lives in the
+    # upstream inner-lane timeouts.
+    uses: eshu-hq/.github/.github/workflows/go-collector-ci.yml@4d01ab90baf5dd77c21cc1ee6bdf701332613449 # v2
+    with:
+      module: package-registry
+      go-version-file: go.mod
+      coverage-floor: 93.1
+      run-image: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.image == 'true' || needs.changes.outputs.go == 'true' }}
+      image-tag: eshu-collector-package-registry:ci
+      image-context: .
+      image-command: |
+        set -euo pipefail
+        seed="$RUNNER_TEMP/seed"
+        mkdir -p "$seed" && chmod 777 "$seed"
+        docker run --rm --network none -v "$seed:/component" eshu-collector-package-registry:ci seed --dest /component
+        test -x "$seed/collector"
+        test -s "$seed/manifest.yaml"
+        test -f .dockerignore
+        test -z "$(grep -E '^FROM ' Dockerfile | grep -v '@sha256:')"
+        grep -E -q 'image: .*@sha256:[0-9a-f]{64}' manifest.yaml
+        test "$(awk '/^go / {print $2}' go.mod)" = "$(grep -E -o 'golang:[0-9.]+' Dockerfile | head -1 | cut -d: -f2)"
+      run-lint: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.go == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.misc == 'true' }}
+      run-test: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.go == 'true' || needs.changes.outputs.fixtures == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.misc == 'true' }}
+      run-race: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.go == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.misc == 'true' }}
+      run-shell: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.shell == 'true' }}
+      run-boundary: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.go == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.misc == 'true' }}
+      boundary-command: go test -count=1 -run TestImportBoundaryRejectsCoreAndCrossCollectorImports .
+      run-govulncheck: ${{ github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.deps == 'true' }}
+      run-gosec: ${{ github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.go == 'true' || needs.changes.outputs.workflows == 'true' }}
+      # Findings fail scheduled runs so the failure()-gated issue job
+      # below is reachable; PR runs stay advisory green.
+      gosec-fail-on-findings: ${{ github.event_name == 'schedule' }}
+      gosec-version: v2.30.0 # this repo's measured triaged baseline, see #13
+      run-actionlint: ${{ github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.workflows == 'true' }}
 
-  test:
-    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.go == 'true' || needs.changes.outputs.fixtures == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.misc == 'true' || (needs.changes.result != 'success' && github.event_name != 'pull_request' && github.event_name != 'schedule'))
-    needs: [changes]
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-      - run: go build ./...
-      - run: go test ./... -count=1
-
-  race:
-    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.go == 'true' || needs.changes.outputs.workflows == 'true' || needs.changes.outputs.misc == 'true' || (needs.changes.result != 'success' && github.event_name != 'pull_request' && github.event_name != 'schedule'))
-    needs: [changes]
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-      - run: go test ./... -race -count=1 -covermode=atomic -coverprofile=coverage.out
-      - run: |
-          go tool cover -func=coverage.out > cover.func
-          total=$(awk '/^total:/ {gsub(/%/, "", $3); print $3}' cover.func)
-          echo "total=${total}% floor=${{ env.COVERAGE_FLOOR }}%"
-          {
-            echo "## Coverage"
-            echo ""
-            echo "Total ${total}% (floor ${{ env.COVERAGE_FLOOR }}%). Per-package statement coverage:"
-            echo ""
-            echo "| Package | Covered | Statements | Coverage |"
-            echo "| --- | --- | --- | --- |"
-            awk 'NR > 1 {n=split($1, a, ":"); file=a[1]; pkg=file; sub(/\/[^/]*$/, "", pkg); stmts[pkg]+=$2; if ($3 > 0) cov[pkg]+=$2} END {for (p in stmts) printf "| %s | %d | %d | %.1f%% |\n", p, cov[p]+0, stmts[p], 100*(cov[p]+0)/stmts[p]}' coverage.out | sort
-          } >> "$GITHUB_STEP_SUMMARY"
-          awk -v total="$total" -v floor="${{ env.COVERAGE_FLOOR }}" 'BEGIN {exit !(total + 0 >= floor + 0)}'
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: coverage-profile
-          path: |
-            coverage.out
-            cover.func
-          retention-days: 14
-
-  boundary:
-    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.go == 'true' || needs.changes.outputs.workflows == 'true' || (needs.changes.result != 'success' && github.event_name != 'pull_request' && github.event_name != 'schedule'))
-    needs: [changes]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-      - run: go test -count=1 -run TestImportBoundaryRejectsCoreAndCrossCollectorImports .
-
-  shell:
-    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.shell == 'true' || (needs.changes.result != 'success' && github.event_name != 'pull_request' && github.event_name != 'schedule'))
-    needs: [changes]
+  scheduled-findings:
+    # The reusable runs contents:read-only, so weekly issue filing stays a
+    # caller job. Fires only when go-ci failed on a schedule event.
+    needs: [go-ci]
+    if: failure() && github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: git ls-files '*.sh' | xargs shellcheck
-
-  image:
-    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.image == 'true' || needs.changes.outputs.go == 'true' || (needs.changes.result != 'success' && github.event_name != 'pull_request' && github.event_name != 'schedule'))
-    needs: [changes]
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Build the image without pushing it
-        run: docker build -t eshu-collector-package-registry:ci .
-      - name: Seed contract
-        run: |
-          seed="$RUNNER_TEMP/seed"
-          mkdir -p "$seed" && chmod 777 "$seed"
-          docker run --rm --network none -v "$seed:/component" eshu-collector-package-registry:ci seed --dest /component
-          test -x "$seed/collector"
-          test -s "$seed/manifest.yaml"
-      - name: Image pin checks
-        run: |
-          test -f .dockerignore
-          test -z "$(grep -E '^FROM ' Dockerfile | grep -v '@sha256:')"
-          grep -E -q 'image: .*@sha256:[0-9a-f]{64}' manifest.yaml
-          test "$(awk '/^go / {print $2}' go.mod)" = "$(grep -E -o 'golang:[0-9.]+' Dockerfile | head -1 | cut -d: -f2)"
-
-  govulncheck:
-    if: always() && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.deps == 'true' || (needs.changes.result != 'success' && github.event_name != 'pull_request' && github.event_name != 'schedule'))
-    needs: [changes]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
       issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-      - run: go install golang.org/x/vuln/cmd/govulncheck@${{ env.GOVULNCHECK_VERSION }}
-      - run: govulncheck -scan package ./...
-      - if: failure() && github.event_name == 'schedule'
+      - name: file or update the weekly findings issue
         run: |
-          title="govulncheck findings $(date -u +%F)"
-          open=$(gh issue list --search "$title" --state open --json number --jq 'length')
-          test "$open" -gt 0 || gh issue create --title "$title" --label security --body "Weekly govulncheck run failed; see the linked run."
+          title="[ci] weekly scan findings $(date -u +%F)"
+          body="Scheduled govulncheck/gosec failed on ${{ github.sha }}. See run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}."
+          open=$(gh issue list --search "$title in:title" --state open --json number --jq '.[0].number')
+          if [ -n "$open" ] && [ "$open" != "null" ]; then
+            gh issue comment "$open" --body "$body"
+          else
+            gh issue create --title "$title" --label security --body "$body"
+          fi
 
-  gosec:
-    if: github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+  gosec-sarif:
+    # Security-tab upload the reusable deliberately omits (fork PRs run
+    # read-only): caller-side, non-PR events only, and continue-on-error
+    # so a 403 never turns into a silent green no-op. Skips when go-ci
+    # failed: the finding count stays in that run's summary and the
+    # weekly issue links the run.
+    needs: [go-ci]
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
     permissions:
       contents: read
       security-events: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
-          go-version-file: go.mod
-      - run: go install github.com/securego/gosec/v2/cmd/gosec@${{ env.GOSEC_VERSION }}
-      - run: gosec -no-fail -fmt=sarif -out gosec.sarif ./...
-      - run: |
-          count=$(jq '[.runs[].results[]] | length' gosec.sarif)
-          echo "gosec findings: ${count}" >> "$GITHUB_STEP_SUMMARY"
-      - uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
-        if: always()
+          name: gosec-package-registry
+          path: ${{ github.workspace }}
+      - name: upload SARIF
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           sarif_file: gosec.sarif
-          category: gosec
-
-  ci-complete:
-    if: always()
-    needs: [changes, lint, test, race, boundary, shell, image, govulncheck, gosec]
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions: {}
-    steps:
-      - run: |
-          printf '%s\n' '${{ toJSON(needs) }}' | python3 -c "import json,sys; sys.exit(1 if any(j.get('result') in ('failure', 'cancelled') for j in json.load(sys.stdin).values()) else 0)"
+        continue-on-error: true
