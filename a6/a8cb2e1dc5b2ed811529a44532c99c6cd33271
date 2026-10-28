@@ -1,0 +1,14 @@
+docs/epic-7-closeout.md
+  h_78a442cba0b3e6 1-121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a6a8cb2e1dc5b2ed811529a44532c99c6cd33271",
+  "prompts": {},
+  "humans": {
+    "h_78a442cba0b3e6": {
+      "author": "Allen Sanabria <asanabria6910@gmail.com>"
+    }
+  }
+}
