@@ -256,12 +256,17 @@ func claimContext(
 	if timeout <= 0 {
 		timeout = time.Duration(DefaultResourceUse().ClaimTimeoutSeconds) * time.Second
 	}
-	if remaining, ok := clampedDeadlineTimeout(started, claim.Deadline); ok && remaining < timeout {
-		timeout = remaining
-	}
-	if timeout <= 0 {
+	if remaining, ok := clampedDeadlineTimeout(started, claim.Deadline); ok {
+		if remaining < timeout {
+			timeout = remaining
+		}
+	} else if !claim.Deadline.IsZero() {
+		// The lease is already spent. Fail fast: arming a fresh timeout
+		// here would collect facts the host's lease check must reject.
 		return ctx, func() {}, false
 	}
+	// Timeout is positive here: non-positive limits take the default above
+	// and a live lease only shrinks it by a margin smaller than itself.
 	bounded, cancel := context.WithTimeoutCause(ctx, timeout, errClaimDeadline)
 	return bounded, cancel, true
 }
