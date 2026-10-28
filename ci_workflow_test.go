@@ -93,6 +93,9 @@ func TestGoCICallSurvivesSkippedChanges(t *testing.T) {
 	if !strings.Contains(job.If, "always()") && strings.Contains(changes.If, "pull_request") {
 		t.Errorf("go-ci if %q does not survive a skipped changes job (changes if %q); schedule and dispatch runs would skip every lane", job.If, changes.If)
 	}
+	if job.Permissions["contents"] != "read" {
+		t.Errorf("go-ci contents permission = %q, want read so the call can fetch the upstream reusable definition; top-level stays empty", job.Permissions["contents"])
+	}
 }
 
 // imageGoClauseProblems returns every way cond breaks the image-lane

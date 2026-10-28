@@ -113,6 +113,11 @@ jobs:
     # skipped on schedule and workflow_dispatch runs.
     if: always()
     needs: [changes]
+    # contents:read is the minimum that can fetch the reusable workflow
+    # definition upstream; inner jobs run under the reusable's own
+    # contents:read declaration. Top-level stays empty (fork-safe).
+    permissions:
+      contents: read
     # No timeout-minutes here: a reusable-call job accepts only name/uses/
     # with/secrets/needs/if/permissions, so the run ceiling lives in the
     # upstream inner-lane timeouts.
