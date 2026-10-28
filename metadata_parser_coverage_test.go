@@ -105,8 +105,10 @@ func TestMetadataHelperGenericRegistryEvents(t *testing.T) {
 	ctx := ratchetParserContext(EcosystemGeneric)
 	identity := PackageIdentity{Ecosystem: EcosystemGeneric, Registry: ctx.Registry, RawName: "acme-widget"}
 	events := []genericRegistryEvent{
-		{EventKey: "evt-1", EventType: "publish", ArtifactKey: "a.tgz", Actor: "bot",
-			Message: "published", OccurredAt: "2026-02-03T04:05:06Z"},
+		{
+			EventKey: "evt-1", EventType: "publish", ArtifactKey: "a.tgz", Actor: "bot",
+			Message: "published", OccurredAt: "2026-02-03T04:05:06Z",
+		},
 		{EventType: "publish"},
 		{EventKey: "evt-2"},
 	}
@@ -423,8 +425,10 @@ func TestMetadataHelperMavenGoModuleCoverage(t *testing.T) {
 	deps := mavenDependencies(ctx,
 		PackageIdentity{Ecosystem: EcosystemMaven, Registry: ctx.Registry, RawName: "app"},
 		"1.0.0", []mavenDependency{
-			{GroupID: "org.example", ArtifactID: "lib", Version: "2.0", Scope: "test",
-				Optional: "true", Classifier: "sources"},
+			{
+				GroupID: "org.example", ArtifactID: "lib", Version: "2.0", Scope: "test",
+				Optional: "true", Classifier: "sources",
+			},
 			{GroupID: "org.bare", ArtifactID: "core", Version: "1.0"},
 			{GroupID: "", ArtifactID: "skip"},
 			{GroupID: "org.skip", ArtifactID: ""},
