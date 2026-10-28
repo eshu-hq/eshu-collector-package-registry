@@ -25,6 +25,8 @@ type workflowFile struct {
 	Permissions map[string]string `yaml:"permissions"`
 	Jobs        map[string]struct {
 		If          string            `yaml:"if"`
+		Uses        string            `yaml:"uses"`
+		With        map[string]any    `yaml:"with"`
 		Permissions map[string]string `yaml:"permissions"`
 		Steps       []workflowStep    `yaml:"steps"`
 	} `yaml:"jobs"`
@@ -50,11 +52,17 @@ func TestCIWorkflowPinsActionsByCommitSHA(t *testing.T) {
 		t.Fatal("ci.yml defines no jobs")
 	}
 	for name, job := range workflow.Jobs {
+		if job.Uses != "" && !pinnedAction.MatchString(job.Uses) {
+			t.Errorf("job %s uses %q, want a full commit SHA pin", name, job.Uses)
+		}
 		for _, step := range job.Steps {
 			if step.Uses != "" && !pinnedAction.MatchString(step.Uses) {
 				t.Errorf("job %s uses %q, want a full commit SHA pin", name, step.Uses)
 			}
 		}
+	}
+	if _, ok := workflow.Jobs["go-ci"]; !ok {
+		t.Error("ci.yml has no go-ci reusable call; lane bodies must live upstream at a pinned SHA")
 	}
 }
 
@@ -87,7 +95,8 @@ func imageGoClauseProblems(cond string) []string {
 // go.mod toolchain bump past the pinned base would otherwise pass every
 // Go lane yet break docker build, surfacing only as post-merge red main.
 // The live ci.yml text must pass; an inverted or removed go clause must
-// fail.
+// fail. The image lane body lives upstream; the caller selects it with
+// the go-ci run-image input, which the same clause rules judge.
 func TestImageLaneRunsOnGoSources(t *testing.T) {
 	t.Parallel()
 
@@ -99,19 +108,23 @@ func TestImageLaneRunsOnGoSources(t *testing.T) {
 	if err := yaml.Unmarshal(raw, &workflow); err != nil {
 		t.Fatal(err)
 	}
-	job, ok := workflow.Jobs["image"]
+	job, ok := workflow.Jobs["go-ci"]
 	if !ok {
-		t.Fatal("ci.yml has no image job")
+		t.Fatal("ci.yml has no go-ci reusable call")
 	}
-	if problems := imageGoClauseProblems(job.If); len(problems) > 0 {
+	cond, ok := job.With["run-image"].(string)
+	if !ok {
+		t.Fatal("go-ci run-image input is not a string")
+	}
+	if problems := imageGoClauseProblems(cond); len(problems) > 0 {
 		t.Errorf("image lane breaks its go-source contract:\n%s", strings.Join(problems, "\n"))
 	}
 
-	inverted := strings.Replace(job.If, "needs.changes.outputs.go == 'true'", "needs.changes.outputs.go != 'true'", 1)
+	inverted := strings.Replace(cond, "needs.changes.outputs.go == 'true'", "needs.changes.outputs.go != 'true'", 1)
 	if len(imageGoClauseProblems(inverted)) == 0 {
 		t.Errorf("inverted go clause: the gate accepted a lane that skips Go-source PRs")
 	}
-	removed := strings.ReplaceAll(job.If, "needs.changes.outputs.go == 'true'", "")
+	removed := strings.ReplaceAll(cond, "needs.changes.outputs.go == 'true'", "")
 	if len(imageGoClauseProblems(removed)) == 0 {
 		t.Errorf("removed go clause: the gate accepted a lane with no go selection")
 	}

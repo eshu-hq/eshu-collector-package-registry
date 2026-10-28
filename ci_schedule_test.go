@@ -21,15 +21,19 @@ type scheduleWorkflow struct {
 	On   map[string]any `yaml:"on"`
 	Jobs map[string]struct {
 		If          string            `yaml:"if"`
+		Needs       []string          `yaml:"needs"`
+		Uses        string            `yaml:"uses"`
+		With        map[string]any    `yaml:"with"`
 		Permissions map[string]string `yaml:"permissions"`
 		Steps       []scheduleStep    `yaml:"steps"`
 	} `yaml:"jobs"`
 }
 
 // TestCIScheduleFilesGovulncheckFindings pins the weekly scanner's filing
-// path on both sides: the schedule trigger must exist, the govulncheck lane
-// must run on it with issues:write, and a step must open an issue when the
-// scheduled scan fails. Without any one of these the finding dies silently.
+// path on both sides: the schedule trigger must exist, the go-ci call must
+// run govulncheck on it, and the caller-side scheduled-findings job must
+// open an issue with issues:write when the scheduled scan fails. Without
+// any one of these the finding dies silently.
 func TestCIScheduleFilesGovulncheckFindings(t *testing.T) {
 	t.Parallel()
 
@@ -56,25 +60,36 @@ func TestCIScheduleFilesGovulncheckFindings(t *testing.T) {
 	if !hasCron {
 		t.Fatal("ci.yml on.schedule has no cron entry")
 	}
-	job, ok := workflow.Jobs["govulncheck"]
+	goCI, ok := workflow.Jobs["go-ci"]
 	if !ok {
-		t.Fatal("ci.yml has no govulncheck job")
+		t.Fatal("ci.yml has no go-ci reusable call")
 	}
-	if !strings.Contains(job.If, "schedule") {
-		t.Errorf("govulncheck condition %q does not run on the schedule event", job.If)
+	runGovulncheck, ok := goCI.With["run-govulncheck"].(string)
+	if !ok {
+		t.Fatal("go-ci run-govulncheck input is not a string")
+	}
+	if !strings.Contains(runGovulncheck, "schedule") {
+		t.Errorf("go-ci run-govulncheck %q does not run on the schedule event", runGovulncheck)
+	}
+	job, ok := workflow.Jobs["scheduled-findings"]
+	if !ok {
+		t.Fatal("ci.yml has no scheduled-findings job")
+	}
+	if !strings.Contains(job.If, "failure()") || !strings.Contains(job.If, "schedule") {
+		t.Errorf("scheduled-findings condition %q must gate on failure() and the schedule event", job.If)
 	}
 	if job.Permissions["issues"] != "write" {
-		t.Errorf("govulncheck issues permission = %q, want write so the schedule run can file findings", job.Permissions["issues"])
+		t.Errorf("scheduled-findings issues permission = %q, want write so the schedule run can file findings", job.Permissions["issues"])
 	}
 	var filesIssue bool
 	for _, step := range job.Steps {
 		if strings.Contains(step.Run, "gh issue create") &&
-			strings.Contains(step.If, "failure()") &&
-			strings.Contains(step.If, "schedule") {
+			strings.Contains(job.If, "failure()") &&
+			strings.Contains(job.If, "schedule") {
 			filesIssue = true
 		}
 	}
 	if !filesIssue {
-		t.Error("govulncheck has no step that files an issue when the scheduled scan fails")
+		t.Error("scheduled-findings has no step that files an issue when the scheduled scan fails")
 	}
 }
