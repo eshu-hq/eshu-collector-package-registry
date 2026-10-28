@@ -66,6 +66,35 @@ func TestCIWorkflowPinsActionsByCommitSHA(t *testing.T) {
 	}
 }
 
+// TestGoCICallSurvivesSkippedChanges pins the schedule/dispatch contract:
+// the changes job runs only on pull_request and push, so the go-ci call
+// must carry if: always() (or changes must cover every trigger event).
+// Otherwise schedule runs skip every lane and the weekly scans silently
+// stop, and manual dispatch runs record nothing.
+func TestGoCICallSurvivesSkippedChanges(t *testing.T) {
+	t.Parallel()
+
+	raw, err := os.ReadFile(".github/workflows/ci.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var workflow workflowFile
+	if err := yaml.Unmarshal(raw, &workflow); err != nil {
+		t.Fatal(err)
+	}
+	job, ok := workflow.Jobs["go-ci"]
+	if !ok {
+		t.Fatal("ci.yml has no go-ci reusable call")
+	}
+	changes, ok := workflow.Jobs["changes"]
+	if !ok {
+		t.Fatal("ci.yml has no changes job")
+	}
+	if !strings.Contains(job.If, "always()") && strings.Contains(changes.If, "pull_request") {
+		t.Errorf("go-ci if %q does not survive a skipped changes job (changes if %q); schedule and dispatch runs would skip every lane", job.If, changes.If)
+	}
+}
+
 // imageGoClauseProblems returns every way cond breaks the image-lane
 // go-source contract: the image embeds Go sources, so the lane must run
 // when the go change class is true. A bare substring check accepts an

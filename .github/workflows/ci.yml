@@ -108,6 +108,10 @@ jobs:
               - '!LICENSE'
 
   go-ci:
+    # always(): changes runs only on pull_request/push, so without this the
+    # call (and every lane, plus the failure-gated weekly filing job) is
+    # skipped on schedule and workflow_dispatch runs.
+    if: always()
     needs: [changes]
     # No timeout-minutes here: a reusable-call job accepts only name/uses/
     # with/secrets/needs/if/permissions, so the run ceiling lives in the
@@ -166,7 +170,7 @@ jobs:
           if [ -n "$open" ] && [ "$open" != "null" ]; then
             gh issue comment "$open" --body "$body"
           else
-            gh issue create --title "$title" --body "$body"
+            gh issue create --title "$title" --label security --body "$body"
           fi
 
   gosec-sarif:

@@ -38,7 +38,9 @@ through `ci-complete`. Anything unclassified (for example `Makefile`,
 `scripts/record-grants.sh` runs `shell` plus `test` because the grant
 test opens it; `.github/dependabot.yml` runs the workflow lanes.
 A manual `workflow_dispatch` run records every lane; the weekly schedule
-runs `govulncheck` and `gosec` only.
+runs `govulncheck`, `gosec`, and `actionlint` (the workflow lanes stay
+green on findings except the scheduled scan, which fails to file the
+weekly issue).
 
 ## Coverage floor
 
