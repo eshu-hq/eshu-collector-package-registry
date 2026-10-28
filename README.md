@@ -72,7 +72,7 @@ facts. A missing deadline leaves only `limits.claimTimeoutSeconds` (default
 Exact published SDK pair from
 [SDK compatibility](https://github.com/eshu-hq/eshu/blob/main/docs/public/extend/sdk-compatibility.md):
 
-- `github.com/eshu-hq/eshu-sdk/collector@v0.1.0-rc.3`
+- `github.com/eshu-hq/eshu-sdk/collector@v0.2.0-rc.1`
 - `github.com/eshu-hq/eshu-sdk/factschema@v0.1.0-rc.5`
 
 No `replace` directives and no `go.work`. Verify with
