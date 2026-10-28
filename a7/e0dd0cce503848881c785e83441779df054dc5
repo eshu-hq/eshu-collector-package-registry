@@ -1,0 +1,16 @@
+bounds_batch3_test.go
+  h_78a442cba0b3e6 159-176,182,185-188
+cmd/collector/seed_batch3_test.go
+  h_78a442cba0b3e6 148-154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a7e0dd0cce503848881c785e83441779df054dc5",
+  "prompts": {},
+  "humans": {
+    "h_78a442cba0b3e6": {
+      "author": "Allen Sanabria <asanabria6910@gmail.com>"
+    }
+  }
+}
