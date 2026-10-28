@@ -145,6 +145,13 @@ func TestWriteAtomicRoundTrip(t *testing.T) {
 	if string(got) != "manifest-bytes" {
 		t.Fatalf("writeAtomic() bytes = %q, want the written content", got)
 	}
+	info, err := os.Stat(target)
+	if err != nil {
+		t.Fatalf("atomic target stat: %v", err)
+	}
+	if info.Mode().Perm() != 0o644 {
+		t.Fatalf("writeAtomic() mode = %o, want 644", info.Mode().Perm())
+	}
 }
 
 // TestRunSeedStampsImageRefEndToEnd pins the operator path through runSeed: a
