@@ -100,8 +100,8 @@ func TestNormalizeSwiftNameCoversRegistryShapes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("normalizeSwiftName(nested) error = %v", err)
 	}
-	if name != "thing" {
-		t.Fatalf("normalizeSwiftName(nested) name = %q, want %q", name, "thing")
+	if name != "thing" || namespace != "github.com/acme/widget" {
+		t.Fatalf("normalizeSwiftName(nested) = (%q, %q), want (%q, %q)", name, namespace, "thing", "github.com/acme/widget")
 	}
 
 	if _, _, err := normalizeSwiftName("mylib", ""); err == nil {
