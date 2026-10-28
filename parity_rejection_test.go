@@ -241,8 +241,8 @@ func TestExtractionParityWarningTaxonomy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWarningEnvelope() error = %v", err)
 	}
-	if message, _ := leaky.Payload["message"].(string); strings.Contains(message, "secret") ||
-		strings.Contains(message, "token=abc") {
+	if message, ok := leaky.Payload["message"].(string); ok && (strings.Contains(message, "secret") ||
+		strings.Contains(message, "token=abc")) {
 		t.Fatalf("warning message leaks credential material: %q", message)
 	}
 }

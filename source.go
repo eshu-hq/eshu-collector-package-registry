@@ -365,5 +365,9 @@ func (h Handler) logLine(claim sdk.Claim, class, detail string, httpStatus, fact
 	if err != nil {
 		return
 	}
-	_, _ = h.Log.Write(append(line, '\n'))
+	// A failed diagnostic write has no recovery action: the claim result
+	// already carries the failure class, so the error is checked and dropped.
+	if _, err := h.Log.Write(append(line, '\n')); err != nil {
+		return
+	}
 }

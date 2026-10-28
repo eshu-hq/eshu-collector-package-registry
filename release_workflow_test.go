@@ -124,8 +124,14 @@ func releaseWorkflowProblems(raw []byte) []string {
 		return []string{fmt.Sprintf("release.yml does not parse: %v", err)}
 	}
 	var problems []string
-	push, _ := workflow.On["push"].(map[string]any)
-	tags, _ := push["tags"].([]any)
+	push, ok := workflow.On["push"].(map[string]any)
+	if !ok {
+		push = nil
+	}
+	tags, ok := push["tags"].([]any)
+	if !ok {
+		tags = nil
+	}
 	if len(workflow.On) != 1 || len(push) != 1 || len(tags) != 1 || tags[0] != "v*" {
 		problems = append(problems, fmt.Sprintf("triggers = %v, want only push of tags [v*]", workflow.On))
 	}

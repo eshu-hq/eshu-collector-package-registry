@@ -146,7 +146,14 @@ func copyExecutable(source string, target string) (string, error) {
 	if err != nil {
 		return "", errors.New("seed: open own executable")
 	}
-	defer func() { _ = in.Close() }()
+	defer func() {
+		// The executable is streamed end-to-end before Close; a close
+		// error on a read-only file carries no recovery action, so it is
+		// checked here and dropped.
+		if cerr := in.Close(); cerr != nil {
+			return
+		}
+	}()
 	hash := sha256.New()
 	if err := writeAtomic(target, 0o755, func(w io.Writer) error {
 		_, err := io.Copy(io.MultiWriter(w, hash), in)
@@ -166,9 +173,16 @@ func writeAtomic(target string, mode os.FileMode, write func(io.Writer) error) (
 	}
 	tmpName := tmp.Name()
 	defer func() {
-		if err != nil {
-			_ = tmp.Close()
-			_ = os.Remove(tmpName)
+		if err == nil {
+			return
+		}
+		// Best-effort temp cleanup on the failure path: err already
+		// explains the failure, so cleanup errors are checked here and
+		// dropped rather than shadowing it.
+		cerr := tmp.Close()
+		rerr := os.Remove(tmpName)
+		if cerr != nil || rerr != nil {
+			return
 		}
 	}()
 	if err = write(tmp); err != nil {
