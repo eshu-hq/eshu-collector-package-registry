@@ -22,7 +22,7 @@ Job names are frozen because branch protection requires `ci-complete`:
 | `race` | Go sources, module, lint-config, or workflow changes, plus unclassified files, plus a coverage artifact and floor check |
 | `boundary` | Go sources or workflow changes (standalone import boundary) |
 | `shell` | Shell script changes |
-| `image` | `Dockerfile`, `.dockerignore`, `manifest.yaml`, or module changes (build only, no push) |
+| `image` | Go sources (the Dockerfile builds the binary from them), `Dockerfile`, `.dockerignore`, `manifest.yaml`, or module changes (build only, no push) |
 | `govulncheck` | Dependency changes, pushes to `main`, weekly schedule, manual dispatch |
 | `gosec` | Pushes to `main`, weekly schedule, and manual dispatch; advisory, SARIF to the Security tab |
 | `ci-complete` | Always; fails on any needed lane failure, passes on legitimate skips |

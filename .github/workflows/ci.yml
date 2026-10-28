@@ -197,7 +197,7 @@ jobs:
       - run: git ls-files '*.sh' | xargs shellcheck
 
   image:
-    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.image == 'true' || (needs.changes.result != 'success' && github.event_name != 'pull_request' && github.event_name != 'schedule'))
+    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.image == 'true' || needs.changes.outputs.go == 'true' || (needs.changes.result != 'success' && github.event_name != 'pull_request' && github.event_name != 'schedule'))
     needs: [changes]
     runs-on: ubuntu-latest
     timeout-minutes: 20
