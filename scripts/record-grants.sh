@@ -21,3 +21,5 @@ for kind in \
     --version "$version" --expires-in "$lifetime" \
     --component-home "$COMPONENT_HOME"
 done
+
+# ci-proof: record-grants-only shell+test check (throwaway).
