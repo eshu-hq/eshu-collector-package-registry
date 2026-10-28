@@ -1,0 +1,16 @@
+cmd/collector/seed.go
+  h_78a442cba0b3e6 128
+cmd/collector/seed_dest_test.go
+  h_78a442cba0b3e6 1-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e3a103782abe9609050a7fcd9b60416d5ddfb402",
+  "prompts": {},
+  "humans": {
+    "h_78a442cba0b3e6": {
+      "author": "Allen Sanabria <asanabria6910@gmail.com>"
+    }
+  }
+}
