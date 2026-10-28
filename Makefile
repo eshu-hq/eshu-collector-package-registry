@@ -30,3 +30,5 @@ test:
 
 race:
 	go test ./... -race -count=1
+
+# ci-proof: Makefile-only misc lane check (throwaway).
