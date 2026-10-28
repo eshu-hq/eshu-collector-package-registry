@@ -17,9 +17,9 @@ Job names are frozen because branch protection requires `ci-complete`:
 
 | Lane | Runs when |
 | --- | --- |
-| `lint` | Go sources, `manifest.yaml`, module or lint-config changes |
-| `test` | Above, plus fixtures and config the tests read |
-| `race` | Go sources, module, lint-config, or workflow changes, plus a coverage artifact and floor check |
+| `lint` | Go sources, `manifest.yaml`, module or lint-config changes, plus unclassified files |
+| `test` | Above, plus fixtures and config the tests read, plus unclassified files |
+| `race` | Go sources, module, lint-config, or workflow changes, plus unclassified files, plus a coverage artifact and floor check |
 | `boundary` | Go sources or workflow changes (standalone import boundary) |
 | `shell` | Shell script changes |
 | `image` | `Dockerfile`, `.dockerignore`, `manifest.yaml`, or module changes (build only, no push) |
@@ -27,7 +27,11 @@ Job names are frozen because branch protection requires `ci-complete`:
 | `gosec` | Pushes to `main`, weekly schedule, and manual dispatch; advisory, SARIF to the Security tab |
 | `ci-complete` | Always; fails on any needed lane failure, passes on legitimate skips |
 
-Docs-only PRs run no lane and stay mergeable through `ci-complete`.
+Docs-only PRs (`README.md`, `LICENSE`) run no lane and stay mergeable
+through `ci-complete`. Anything unclassified (for example `Makefile`,
+`CODEOWNERS`, `.gitignore`) runs `lint`, `test`, and `race`.
+`scripts/record-grants.sh` runs `shell` plus `test` because the grant
+test opens it; `.github/dependabot.yml` runs the workflow lanes.
 A manual `workflow_dispatch` run records every lane; the weekly schedule
 runs `govulncheck` and `gosec` only.
 
@@ -43,5 +47,7 @@ delete assertions to move the number.
 PR lanes never touch a live registry: tests run against inline fixtures.
 `manifest.yaml` is embedded into the binary, so editing it runs the full
 Go lanes. `grant.example.json` is read by the grant tests, so editing it
-runs `test` only. Base images stay digest-pinned; re-pin with the
-`scripts/pin-digest.sh` flow and keep the Go base in sync with `go.mod`.
+runs `test` only. `scripts/record-grants.sh` is opened by the grant test,
+so editing it runs `shell` plus `test`. Base images stay digest-pinned;
+re-pin with the `scripts/pin-digest.sh` flow and keep the Go base in sync
+with `go.mod`.
