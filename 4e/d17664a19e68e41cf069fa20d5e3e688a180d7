@@ -1,0 +1,14 @@
+metadata_parser_coverage_test.go
+  h_78a442cba0b3e6 108-111,428-431
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4ed17664a19e68e41cf069fa20d5e3e688a180d7",
+  "prompts": {},
+  "humans": {
+    "h_78a442cba0b3e6": {
+      "author": "Allen Sanabria <asanabria6910@gmail.com>"
+    }
+  }
+}
