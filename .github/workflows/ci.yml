@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  COVERAGE_FLOOR: 81.4
+  COVERAGE_FLOOR: 93.1
   GOLANGCI_VERSION: v2.12.2
   GOSEC_VERSION: v2.30.0
   GOVULNCHECK_VERSION: v1.9.0
