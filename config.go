@@ -39,10 +39,6 @@ type TargetConfig struct {
 	FencingToken int64
 }
 
-func (c RuntimeConfig) validated() (RuntimeConfig, error) {
-	return c.Validate()
-}
-
 // Validate normalizes runtime defaults and rejects unbounded
 // package-registry targets before any collector opens a registry connection.
 func (c RuntimeConfig) Validate() (RuntimeConfig, error) {

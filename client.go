@@ -210,7 +210,11 @@ func (p HTTPMetadataProvider) FetchMetadata(ctx context.Context, target FetchTar
 		}
 	}
 	defer func() {
-		_ = response.Body.Close()
+		// The body is consumed end-to-end before Close; a close error
+		// carries no recovery action, so it is checked here and dropped.
+		if cerr := response.Body.Close(); cerr != nil {
+			return
+		}
 	}()
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
 		var cause error

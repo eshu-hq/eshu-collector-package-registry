@@ -102,8 +102,8 @@ func TestExtractionParityRegisteredEcosystems(t *testing.T) {
 			if !ok || len(anchors) == 0 {
 				t.Fatalf("correlation_anchors = %#v, want non-empty", fact.Payload["correlation_anchors"])
 			}
-			packageID, _ := fact.Payload["package_id"].(string)
-			if packageID == "" {
+			packageID, ok := fact.Payload["package_id"].(string)
+			if !ok || packageID == "" {
 				t.Fatalf("package_id payload is empty for %s", fixture.name)
 			}
 			if !containsAnchor(anchors, packageID) {

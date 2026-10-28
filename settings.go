@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 )
 
 // ConfigError reports an invalid activation config. Its text names config keys
@@ -230,19 +229,4 @@ func mapDerivedTargets(config derivedJSON) (DerivedTargetConfig, error) {
 		PackageLimit: config.PackageLimit,
 		VersionLimit: config.VersionLimit,
 	}), nil
-}
-
-func envDuration(getenv func(string) string, key string, fallback time.Duration) (time.Duration, error) {
-	raw := strings.TrimSpace(getenv(key))
-	if raw == "" {
-		return fallback, nil
-	}
-	value, err := time.ParseDuration(raw)
-	if err != nil {
-		return 0, fmt.Errorf("parse %s: %w", key, err)
-	}
-	if value <= 0 {
-		return 0, fmt.Errorf("%s must be positive", key)
-	}
-	return value, nil
 }

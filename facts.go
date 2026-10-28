@@ -116,12 +116,18 @@ func boolPtr(value bool) *bool {
 }
 
 func payloadString(payload map[string]any, key string) string {
-	value, _ := payload[key].(string)
+	value, ok := payload[key].(string)
+	if !ok {
+		return ""
+	}
 	return value
 }
 
 func payloadStringSlice(payload map[string]any, key string) []string {
-	value, _ := payload[key].([]string)
+	value, ok := payload[key].([]string)
+	if !ok {
+		return nil
+	}
 	return value
 }
 

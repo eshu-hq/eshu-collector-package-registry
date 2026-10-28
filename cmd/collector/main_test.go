@@ -45,7 +45,9 @@ func fakeRegistry(t *testing.T) *httptest.Server {
 			w.WriteHeader(http.StatusNotAcceptable)
 			return
 		}
-		_, _ = io.WriteString(w, `{"name": "left-pad", "versions": {"1.3.0": {"dist": {"tarball": "https://registry.npmjs.org/left-pad/-/left-pad-1.3.0.tgz"}}}}`)
+		if _, err := io.WriteString(w, `{"name": "left-pad", "versions": {"1.3.0": {"dist": {"tarball": "https://registry.npmjs.org/left-pad/-/left-pad-1.3.0.tgz"}}}}`); err != nil {
+			t.Errorf("io.WriteString() error = %v", err)
+		}
 	}))
 	t.Cleanup(server.Close)
 	return server
