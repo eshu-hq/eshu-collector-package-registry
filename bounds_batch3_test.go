@@ -156,13 +156,36 @@ func TestBoundedParsedMetadataRejectsUnnormalizableObservations(t *testing.T) {
 		ScopeID: "npm://registry.npmjs.org/left-pad", GenerationID: "generation-1",
 		CollectorInstanceID: "package-registry-qa",
 	}}
+	packageStage := npmBatchParsed()
+	packageStage.Packages[0].Identity = blankName
+	artifactStage := npmBatchParsed()
+	artifactStage.Artifacts = []PackageArtifactObservation{{
+		Package: blankName, Version: "1.0.0",
+	}}
+	sourceHintStage := npmBatchParsed()
+	sourceHintStage.SourceHints = []SourceHintObservation{{
+		Package: blankName, Version: "1.0.0",
+	}}
+	vulnerabilityStage := npmBatchParsed()
+	vulnerabilityStage.Vulnerables = []VulnerabilityHintObservation{{
+		Package: blankName, Version: "1.0.0",
+	}}
+	eventStage := npmBatchParsed()
+	eventStage.Events = []RegistryEventObservation{{
+		Package: blankName, Version: "1.0.0",
+	}}
 
 	for _, tc := range []struct {
 		name   string
 		parsed ParsedMetadata
 	}{
+		{name: "packages", parsed: packageStage},
 		{name: "versions", parsed: versionStage},
 		{name: "dependencies", parsed: dependencyStage},
+		{name: "artifacts", parsed: artifactStage},
+		{name: "sourcehints", parsed: sourceHintStage},
+		{name: "vulnerabilities", parsed: vulnerabilityStage},
+		{name: "events", parsed: eventStage},
 		{name: "warnings", parsed: warningStage},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
