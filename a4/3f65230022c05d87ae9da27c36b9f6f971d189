@@ -1,0 +1,20 @@
+cmd/collector/main_dispatch_test.go
+  h_78a442cba0b3e6 1-75
+cmd/collector/seed_coverage_test.go
+  h_78a442cba0b3e6 1-106
+facts_build_coverage_test.go
+  h_78a442cba0b3e6 1-238
+failure_coverage_test.go
+  h_78a442cba0b3e6 1-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a43f65230022c05d87ae9da27c36b9f6f971d189",
+  "prompts": {},
+  "humans": {
+    "h_78a442cba0b3e6": {
+      "author": "Allen Sanabria <asanabria6910@gmail.com>"
+    }
+  }
+}
