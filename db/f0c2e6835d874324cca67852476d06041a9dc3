@@ -1,0 +1,14 @@
+derived_targets_test.go
+  h_78a442cba0b3e6 1-483
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dbf0c2e6835d874324cca67852476d06041a9dc3",
+  "prompts": {},
+  "humans": {
+    "h_78a442cba0b3e6": {
+      "author": "Allen Sanabria <asanabria6910@gmail.com>"
+    }
+  }
+}
