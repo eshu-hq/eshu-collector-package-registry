@@ -5,7 +5,7 @@
 `make ci` runs the same lint, test, and race commands CI runs: `go vet`,
 `golangci-lint run` plus the gofumpt format check, `go mod tidy -diff`,
 the 500-line `.go` file cap, `go build`, the full test suite, and the
-race suite. Run it before every push. It needs Go 1.26.5 or newer;
+race suite. Run it before every push. It needs Go 1.26.10 or newer;
 `go.mod` is the version of record and CI installs exactly that.
 
 Shell scripts pass `shellcheck` (see the `shell` lane). Keep them
