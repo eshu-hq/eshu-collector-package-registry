@@ -18,11 +18,15 @@ type workflowStep struct {
 	Run  string            `yaml:"run"`
 	With map[string]any    `yaml:"with"`
 	Env  map[string]string `yaml:"env"`
+	// If holds the step's `if:` condition. The release metadata
+	// duality test reads it; other tests ignore it.
+	If string `yaml:"if"`
 }
 
 type workflowFile struct {
 	On          map[string]any    `yaml:"on"`
 	Permissions map[string]string `yaml:"permissions"`
+	Concurrency map[string]any    `yaml:"concurrency"`
 	Jobs        map[string]struct {
 		If          string            `yaml:"if"`
 		Uses        string            `yaml:"uses"`
