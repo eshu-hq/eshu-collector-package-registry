@@ -142,14 +142,19 @@ repository only ships the request.
 
 ## Releasing
 
-`.github/workflows/release.yml` runs only when a tag `vMAJOR.MINOR.PATCH[-pre]`
-is pushed. Nothing runs on a pull request or a branch push, and the workflow
-deploys nothing.
+`.github/workflows/release.yml` runs on every push to `main` and on every
+pushed tag `vMAJOR.MINOR.PATCH[-pre]`. Nothing runs on a pull request, and
+the workflow deploys nothing.
 
-The workflow refuses to publish unless the tag points at the protected
-`main` head, so a `v*` tag cut from any other commit publishes nothing. As
-defense in depth, restrict who can create `v*` tags with a tag ruleset
-limited to maintainers.
+A push to `main` publishes the moving `main`, `latest`, and
+`sha-<full-sha>` tags with the same signature and attestation hardening as a
+version release. Use a moving tag only where floating is intended; releases
+stay pinned to digests.
+
+The workflow refuses to publish a version release unless the tag points at
+the protected `main` head, so a `v*` tag cut from any other commit publishes
+nothing. As defense in depth, restrict who can create `v*` tags with a tag
+ruleset limited to maintainers.
 
 1. Set `metadata.version` in `manifest.yaml` to the version you are releasing
    and merge that change to `main`. Then tag the merge commit and push the tag.
@@ -157,7 +162,8 @@ limited to maintainers.
    (a `-pre-release` suffix on the tag is allowed when the manifest version has
    none), and it checks this before it builds or pushes anything.
 2. The workflow builds `linux/amd64` (the only platform the manifest declares),
-   pushes `ghcr.io/eshu-hq/eshu-collector-package-registry:<tag>`, writes the
+   pushes `ghcr.io/eshu-hq/eshu-collector-package-registry:<tag>` (or `:main`,
+   `:latest`, and `:sha-<full-sha>` for a `main` push), writes the
    digest to the job summary, signs the digest with cosign (keyless), and
    attaches a SLSA build-provenance attestation and an SPDX SBOM attestation.
    It needs no secret beyond the job's `GITHUB_TOKEN`.
