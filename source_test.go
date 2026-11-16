@@ -5,6 +5,7 @@ package collector
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -89,7 +90,7 @@ func TestHandlerCollectsPackumentFacts(t *testing.T) {
 	if len(result.Facts) != 3 {
 		t.Fatalf("facts=%d, want 3 (package, version, artifact)", len(result.Facts))
 	}
-	if result.Claim != claim {
+	if !reflect.DeepEqual(result.Claim, claim) {
 		t.Fatal("result must echo the claim unchanged")
 	}
 	if result.Generation.ID != claim.GenerationID {
