@@ -61,11 +61,13 @@ The host validates the result and owns claims and commits.
   [SDK compatibility](https://github.com/eshu-hq/eshu/blob/main/docs/public/extend/sdk-compatibility.md)
   page the pins come from.
 - [eshu-sdk](https://github.com/eshu-hq/eshu-sdk) holds the SDK modules
-  in `go.mod` here: `collector v0.2.0-rc.1`, `factschema v0.1.0-rc.5`,
-  on Go `1.26.10` (full table in [configuration](docs/reference/configuration.md)).
+  in `go.mod` here: `collector v0.2.0-rc.4`, `factschema v0.1.0-rc.19`,
+  on Go `1.26.11` (full table in [configuration](docs/reference/configuration.md)).
 - [eshu-deploy](https://github.com/eshu-hq/eshu-deploy) is related
   reading for deployment examples only. It isn't a dependency, and
   nothing in this tree references it outside this list.
+- [Collector and Reducer Readiness](https://github.com/eshu-hq/eshu/blob/main/docs/public/reference/collector-reducer-readiness.md) and the 31-repo
+  [Repository Map](https://github.com/eshu-hq/eshu/blob/main/REPOSITORIES.md) in Eshu core.
 
 ## Development
 
